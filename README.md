@@ -9,7 +9,7 @@
 
 
 ## technical
-"*"Python3 for frontend and backend development
+* Python3 for frontend and backend development
 "*"SQLite for a light and serverless database
 "*"CustomTkinter for GUI in python
 
