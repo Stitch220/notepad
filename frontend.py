@@ -1,19 +1,19 @@
 import backend as be
 import customtkinter as ctk
 
-class Sidebar(ctk.CTkFrame):
-    def __init__(self, master, **kwarfs):
-        super().__init__(master, **kwarfs)
 
-        # expand sidbar but not buttons
-        self.rowconfigure(3,weight=1)
+class Sidebar(ctk.CTkFrame):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+
+        self.rowconfigure(3, weight=1)
 
         self.new_note_btn = ctk.CTkButton(
             self,
             text="New Note",
             width=250,
             font=self.winfo_toplevel().button_font,
-            command=self.winfo_toplevel().save_note
+            command=self.winfo_toplevel().new_note
         )
         self.new_note_btn.grid(
             column=0,
@@ -65,6 +65,7 @@ class Sidebar(ctk.CTkFrame):
             sticky="nsew"
         )
 
+
 class MainWindow(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
@@ -76,7 +77,7 @@ class MainWindow(ctk.CTkFrame):
             self,
             fg_color="transparent",
             border_width=0,
-            font=self.winfo_toplevel().title_font            
+            font=self.winfo_toplevel().title_font
         )
         self.title.grid(
             column=0,
@@ -86,7 +87,7 @@ class MainWindow(ctk.CTkFrame):
             sticky="ew"
         )
 
-        self.body = ctk.CTkTextBox(
+        self.body = ctk.CTkTextbox(
             self,
             fg_color="transparent",
             font=self.winfo_toplevel().body_font,
@@ -100,18 +101,22 @@ class MainWindow(ctk.CTkFrame):
             columnspan=2
         )
 
-class App(ctk.CTk)
+
+class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # Create local db and table if they don't exist
         be.create_notes_table()
 
+        # Appearance
         ctk.set_appearance_mode('dark')
         self.title('Notes')
         self.geometry('1000x600')
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
 
+        # Fonts
         self.title_font = ctk.CTkFont(
             family="Arial",
             size=40,
@@ -126,10 +131,9 @@ class App(ctk.CTk)
             size=13
         )
 
-
-        #Sidebar
-        self.sidbar = Sidebar(self, fg_color="transparent")
-        self.sidbar.grid(
+        # Sidebar
+        self.sidebar = Sidebar(self, fg_color="transparent")
+        self.sidebar.grid(
             column=0,
             row=0,
             padx=(10, 5),
@@ -137,7 +141,7 @@ class App(ctk.CTk)
             sticky="ns"
         )
 
-        #Main Window
+        # Main Window
         self.main_window = MainWindow(self, fg_color="transparent")
         self.main_window.grid(
             column=1,
@@ -147,73 +151,68 @@ class App(ctk.CTk)
             sticky="nsew"
         )
 
-        # Start new Note
+        # Start a New Note
         self.new_note()
 
-        # Load buttons for any existing notes into the sidbar
+# Load buttons for any existing notes into the sidebar
         self.load_notes()
 
-        def new_note(self):
-            self.current_note_id = None
-            self.main_window.title.delete(0, ctk.END)
-            self.main_window.body.delete('1.0',ctk.END)
-            self.main_window.title.insert(0, "New Note")
-            self.main_window.body.focus_set()
-            self.sidbar.delete_note_btn.configure(state='disabled')
+    def new_note(self):
+        self.current_note_id = None
+        self.main_window.title.delete(0, ctk.END)
+        self.main_window.body.delete('1.0', ctk.END)
+        self.main_window.title.insert(0, "New Note")
+        self.main_window.body.focus_set()
+        self.sidebar.delete_note_btn.configure(state='disabled')
 
-        def save_note(self):
-            title = self.main_window.title.get()
-            body = self.main_window.body.get('1.0', ctk.END)
+    def save_note(self):
+        title = self.main_window.title.get()
+        body = self.main_window.body.get('1.0', ctk.END)
 
-            if self.current_note_id is None:
-                be.create_note(title, body)
-            else:
-                be.update_note(self.current_note_id, title, body)
+        if self.current_note_id is None:
+            be.create_note(title, body)
+        else:
+            be.update_note(self.current_note_id, title, body)
 
-            note_id = be.get_last_note_id()
-            self.current_note_id = note_id
+        note_id = be.get_last_note_id()
+        self.current_note_id = note_id
 
+        self.load_notes()
+        self.sidebar.delete_note_btn.configure(state='normal')
+
+    def delete_note(self):
+        if self.current_note_id is not None:
+            be.delete_note(self.current_note_id)
             self.load_notes()
+            self.new_note()
+
+    def load_note_content(self, note_id):
+        note = be.get_note(note_id)
+        if note:
+            note_title = note[1]
+            note_body = note[2]
+            self.current_note_id = note_id
+            self.main_window.title.delete(0, ctk.END)
+            self.main_window.body.delete('1.0', ctk.END)
+            self.main_window.title.insert(0, note_title)
+            self.main_window.body.insert('1.0', note_body)
             self.sidebar.delete_note_btn.configure(state='normal')
 
-        def delete_note(self):
-            if self.current_note_id is not None:
-                be.delete_note(self.current_note_id)
-                self.load_notes()
-                self.new_note()
+    def load_notes(self):
+        for child in self.sidebar.notes_list.winfo_children():
+            child.destroy()
 
-        def load_note_content(self, note_id):
-            note = be.get_note(note_id)
-            if note:
-                note_title = note[1]
-                note_body = note[2]
-                self.current_note_id = note_id
-                self.main_window.title.delete(0, ctk.END)
-                self.main_window.body.delete('1.0', ctk.END)
-                self.main_window.title.insert(0, note_title)
-                self.main_window.body.insert('1.0', note_body)
-                self.sidebar.delete_note_btn.configure(state='normal')
+        notes = be.get_all_notes()
 
-        def load_notes(self):
-            for child in self.sidebar.notes_list.winfo.children():
-                child.destroy()
-            
-            notes = be.get_all_notes()
-
-            for i, note in enumerate(notes):
-                note_id = note[0]
-                note_title = note[1]
-                button = ctk.CTkButton(
-                    self.sidebar.notes_list,
-                    text=note_title,
-                    width=250,
-                    fg_color="transparent",
-                    font=self.button_font,
-                    command=lambda id=note_id: self.load_note_content(id)
-                )
-                button.grid(column=0, row=i, padx=10, pady=5)
-
-
-
-
-
+        for i, note in enumerate(notes):
+            note_id = note[0]
+            note_title = note[1]
+            button = ctk.CTkButton(
+                self.sidebar.notes_list,
+                text=note_title,
+                width=250,
+                fg_color="transparent",
+                font=self.button_font,
+                command=lambda id=note_id: self.load_note_content(id)
+            )
+            button.grid(column=0, row=i, padx=10, pady=5)
