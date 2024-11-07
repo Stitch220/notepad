@@ -22,5 +22,5 @@ A simple Notepad coded in Python to create, read, update and delete notes. All n
 
 * app.py: This script will combine evrything. It initializes both the backend and frontend modules to create a working app.
 
-> Achtung {.is-danger}
+
  
